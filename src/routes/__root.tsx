@@ -1,6 +1,11 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import {
+  NeonAuthUIProvider,
+  AuthUIProvider,
+} from '@neondatabase/neon-js/auth/react'
+import { authClient } from '../auth'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 
@@ -40,9 +45,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
-        <Header />
-        {children}
+        <NeonAuthUIProvider authClient={authClient}>
+          <Header />
+        </NeonAuthUIProvider>
+        <NeonAuthUIProvider
+          authClient={authClient}
+          social={{ providers: ['google'] }}
+          credentials={{ forgotPassword: true }}
+        >
+          {children}
+        </NeonAuthUIProvider>
         <Footer />
+        {/* <NeonAuthUIProvider authClient={authClient}> */}
+        {/* <Outlet /> */}
         <TanStackDevtools
           config={{
             position: 'bottom-right',
@@ -54,6 +69,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             },
           ]}
         />
+        {/* </NeonAuthUIProvider> */}
         <Scripts />
       </body>
     </html>

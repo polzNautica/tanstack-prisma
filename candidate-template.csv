@@ -1,0 +1,5 @@
+id,name,email,organization,invited_by
+CAND001,John Doe,john.doe@example.com,Acme Corp,HR Department
+CAND002,Jane Smith,jane.smith@example.com,Tech Inc,HR Department
+CAND003,Bob Johnson,bob.j@example.com,Startup LLC,John Manager
+CAND004,Alice Williams,alice.w@example.com,Enterprise Co,Jane Director

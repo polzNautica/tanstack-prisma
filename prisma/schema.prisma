@@ -12,3 +12,17 @@ model Todo {
   title     String
   createdAt DateTime @default(now())
 }
+
+model Candidate {
+  id           String     @id
+  name         String
+  email        String
+  organization String
+  invitedBy    String     @map("invited_by")
+  isAttended   Boolean    @default(false) @map("is_attended")
+  attendedAt   DateTime?  @map("attended_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@map("candidates")
+}

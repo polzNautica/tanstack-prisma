@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoPrismaRouteImport } from './routes/demo/prisma'
+import { Route as AuthPathnameRouteImport } from './routes/auth.$pathname'
+import { Route as AdminAttendanceRouteImport } from './routes/admin/attendance'
+import { Route as AccountPathnameRouteImport } from './routes/account.$pathname'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
@@ -28,34 +31,80 @@ const DemoPrismaRoute = DemoPrismaRouteImport.update({
   path: '/demo/prisma',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthPathnameRoute = AuthPathnameRouteImport.update({
+  id: '/auth/$pathname',
+  path: '/auth/$pathname',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAttendanceRoute = AdminAttendanceRouteImport.update({
+  id: '/admin/attendance',
+  path: '/admin/attendance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountPathnameRoute = AccountPathnameRouteImport.update({
+  id: '/account/$pathname',
+  path: '/account/$pathname',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account/$pathname': typeof AccountPathnameRoute
+  '/admin/attendance': typeof AdminAttendanceRoute
+  '/auth/$pathname': typeof AuthPathnameRoute
   '/demo/prisma': typeof DemoPrismaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account/$pathname': typeof AccountPathnameRoute
+  '/admin/attendance': typeof AdminAttendanceRoute
+  '/auth/$pathname': typeof AuthPathnameRoute
   '/demo/prisma': typeof DemoPrismaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account/$pathname': typeof AccountPathnameRoute
+  '/admin/attendance': typeof AdminAttendanceRoute
+  '/auth/$pathname': typeof AuthPathnameRoute
   '/demo/prisma': typeof DemoPrismaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/demo/prisma'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/account/$pathname'
+    | '/admin/attendance'
+    | '/auth/$pathname'
+    | '/demo/prisma'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/demo/prisma'
-  id: '__root__' | '/' | '/about' | '/demo/prisma'
+  to:
+    | '/'
+    | '/about'
+    | '/account/$pathname'
+    | '/admin/attendance'
+    | '/auth/$pathname'
+    | '/demo/prisma'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/account/$pathname'
+    | '/admin/attendance'
+    | '/auth/$pathname'
+    | '/demo/prisma'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AccountPathnameRoute: typeof AccountPathnameRoute
+  AdminAttendanceRoute: typeof AdminAttendanceRoute
+  AuthPathnameRoute: typeof AuthPathnameRoute
   DemoPrismaRoute: typeof DemoPrismaRoute
 }
 
@@ -82,12 +131,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoPrismaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/$pathname': {
+      id: '/auth/$pathname'
+      path: '/auth/$pathname'
+      fullPath: '/auth/$pathname'
+      preLoaderRoute: typeof AuthPathnameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/attendance': {
+      id: '/admin/attendance'
+      path: '/admin/attendance'
+      fullPath: '/admin/attendance'
+      preLoaderRoute: typeof AdminAttendanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/$pathname': {
+      id: '/account/$pathname'
+      path: '/account/$pathname'
+      fullPath: '/account/$pathname'
+      preLoaderRoute: typeof AccountPathnameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AccountPathnameRoute: AccountPathnameRoute,
+  AdminAttendanceRoute: AdminAttendanceRoute,
+  AuthPathnameRoute: AuthPathnameRoute,
   DemoPrismaRoute: DemoPrismaRoute,
 }
 export const routeTree = rootRouteImport

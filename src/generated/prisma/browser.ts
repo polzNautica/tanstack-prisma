@@ -22,3 +22,8 @@ export * from './enums.ts';
  * 
  */
 export type Todo = Prisma.TodoModel
+/**
+ * Model Candidate
+ * 
+ */
+export type Candidate = Prisma.CandidateModel

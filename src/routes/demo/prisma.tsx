@@ -1,6 +1,8 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { prisma } from '#/db'
+import { useState } from 'react'
+import { Pencil, Trash2, X, Check } from 'lucide-react'
 
 const getTodos = createServerFn({
   method: 'GET',
@@ -20,6 +22,28 @@ const createTodo = createServerFn({
     })
   })
 
+const updateTodo = createServerFn({
+  method: 'POST',
+})
+  .inputValidator((data: { id: number; title: string }) => data)
+  .handler(async ({ data }) => {
+    console.log(data)
+    return await prisma.todo.update({
+      where: { id: data.id },
+      data: { title: data.title },
+    })
+  })
+
+const deleteTodo = createServerFn({
+  method: 'POST',
+})
+  .inputValidator((data: { id: number }) => data)
+  .handler(async ({ data }) => {
+    return await prisma.todo.delete({
+      where: { id: data.id },
+    })
+  })
+
 export const Route = createFileRoute('/demo/prisma')({
   component: DemoPrisma,
   loader: async () => await getTodos(),
@@ -28,8 +52,10 @@ export const Route = createFileRoute('/demo/prisma')({
 function DemoPrisma() {
   const router = useRouter()
   const todos = Route.useLoaderData()
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
     const title = formData.get('title') as string
@@ -43,6 +69,42 @@ function DemoPrisma() {
     } catch (error) {
       console.error('Failed to create todo:', error)
     }
+  }
+
+  const handleEdit = (todo: { id: number; title: string }) => {
+    console.log('Editing todo:', todo)
+    setEditingId(todo.id)
+    setEditTitle(todo.title)
+  }
+
+  const handleUpdate = async (id: number) => {
+    console.log('Updating todo:', id)
+    if (!editTitle.trim()) return
+
+    try {
+      await updateTodo({ data: { id, title: editTitle } })
+      setEditingId(null)
+      setEditTitle('')
+      router.invalidate()
+    } catch (error) {
+      console.error('Failed to update todo:', error)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this todo?')) return
+
+    try {
+      await deleteTodo({ data: { id } })
+      router.invalidate()
+    } catch (error) {
+      console.error('Failed to delete todo:', error)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditTitle('')
   }
 
   return (
@@ -86,33 +148,7 @@ function DemoPrisma() {
 
         <h2 className="text-2xl font-bold mb-4 text-indigo-200">Todos</h2>
 
-        <ul className="space-y-3 mb-6">
-          {todos.map((todo) => (
-            <li
-              key={todo.id}
-              className="rounded-lg p-4 shadow-md border transition-all hover:scale-[1.02] cursor-pointer group"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(93, 103, 227, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
-                borderColor: 'rgba(93, 103, 227, 0.3)',
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-medium text-white group-hover:text-indigo-200 transition-colors">
-                  {todo.title}
-                </span>
-                <span className="text-xs text-indigo-300/70">#{todo.id}</span>
-              </div>
-            </li>
-          ))}
-          {todos.length === 0 && (
-            <li className="text-center py-8 text-indigo-300/70">
-              No todos yet. Create one below!
-            </li>
-          )}
-        </ul>
-
-        <form onSubmit={handleSubmit} className="flex gap-2">
+        <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
           <input
             type="text"
             name="title"
@@ -136,7 +172,98 @@ function DemoPrisma() {
           </button>
         </form>
 
-        <div
+        <ul className="space-y-3 mb-6">
+          {todos.map((todo) => (
+            <li
+              key={todo.id}
+              className="rounded-lg p-4 shadow-md border transition-all hover:scale-[1.02] group"
+              style={{
+                background:
+                  'linear-gradient(135deg, rgba(93, 103, 227, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
+                borderColor: 'rgba(93, 103, 227, 0.3)',
+              }}
+            >
+              {editingId === todo.id ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 transition-all text-white"
+                    style={{
+                      background: 'rgba(93, 103, 227, 0.1)',
+                      borderColor: 'rgba(93, 103, 227, 0.3)',
+                    }}
+                    autoFocus
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleUpdate(todo.id)
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => handleUpdate(todo.id)}
+                    className="p-2 rounded-lg transition-all hover:scale-110"
+                    style={{
+                      background:
+                        'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    }}
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="p-2 rounded-lg transition-all hover:scale-110"
+                    style={{
+                      background:
+                        'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-medium text-white group-hover:text-indigo-200 transition-colors flex-1">
+                    {todo.title}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(todo)}
+                      className="p-2 rounded-lg transition-all hover:scale-110 opacity-0 group-hover:opacity-100"
+                      style={{
+                        background:
+                          'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(todo.id)}
+                      className="p-2 rounded-lg transition-all hover:scale-110 opacity-0 group-hover:opacity-100"
+                      style={{
+                        background:
+                          'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <span className="text-xs text-indigo-300/70 ml-2">
+                      #{todo.id}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+          {todos.length === 0 && (
+            <li className="text-center py-8 text-indigo-300/70">
+              No todos yet. Create one below!
+            </li>
+          )}
+        </ul>
+
+        {/* <div
           className="mt-8 p-6 rounded-lg border"
           style={{
             background: 'rgba(93, 103, 227, 0.05)',
@@ -179,7 +306,7 @@ function DemoPrisma() {
               </li>
             </ol>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   )
