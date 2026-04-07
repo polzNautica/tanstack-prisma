@@ -34,6 +34,7 @@ import {
 } from '@neondatabase/neon-js/auth/react'
 import { authClient } from '#/auth'
 import { ArrowLeft, Upload, Download, QrCode, Search } from 'lucide-react'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/admin/attendance')({
   component: AttendanceDashboard,
@@ -80,6 +81,7 @@ function AttendanceDashboard() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  let toastId = useRef(0)
 
   // Fetch candidates with current filters
   const fetchCandidates = useCallback(async (
@@ -140,7 +142,7 @@ function AttendanceDashboard() {
       })
 
       if ('success' in result) {
-        alert(`Successfully imported ${result.imported} candidates!`)
+        toast.success(`Successfully imported ${result.imported} candidates!`)
         fetchCandidates(1, search, statusFilter, sortBy, sortOrder, false)
       } else {
         alert(`Import failed: ${result.error}`)
@@ -357,6 +359,7 @@ function AttendanceDashboard() {
             attendedAt: isAttended ? new Date() : null,
           },
         })
+        toast.success('Attendance toggled successfully', {id: `toast-${++toastId.current}`})
         // Refresh with current filters
         fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
       }
