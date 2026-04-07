@@ -13,6 +13,7 @@ interface Candidate {
   id?: number
   name: string
   email: string
+  phone: string
   organization: string
   invitedBy: string
 }
@@ -31,6 +32,7 @@ export default function CandidateFormModal({
   const [formData, setFormData] = useState<Candidate>({
     name: '',
     email: '',
+    phone: '',
     organization: '',
     invitedBy: '',
   })
@@ -42,6 +44,7 @@ export default function CandidateFormModal({
         id: candidate.id,
         name: candidate.name,
         email: candidate.email,
+        phone: candidate.phone || '',
         organization: candidate.organization,
         invitedBy: candidate.invitedBy,
       })
@@ -49,6 +52,7 @@ export default function CandidateFormModal({
       setFormData({
         name: '',
         email: '',
+        phone: '',
         organization: '',
         invitedBy: '',
       })
@@ -119,6 +123,21 @@ export default function CandidateFormModal({
                 }
                 placeholder="email@example.com"
                 required
+                className="text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Phone
+              </label>
+              <Input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                placeholder="6012345678"
                 className="text-sm"
               />
             </div>

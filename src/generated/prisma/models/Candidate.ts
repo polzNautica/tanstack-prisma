@@ -38,6 +38,7 @@ export type CandidateMinAggregateOutputType = {
   id: number | null
   name: string | null
   email: string | null
+  phone: string | null
   organization: string | null
   invitedBy: string | null
   isAttended: boolean | null
@@ -50,6 +51,7 @@ export type CandidateMaxAggregateOutputType = {
   id: number | null
   name: string | null
   email: string | null
+  phone: string | null
   organization: string | null
   invitedBy: string | null
   isAttended: boolean | null
@@ -62,6 +64,7 @@ export type CandidateCountAggregateOutputType = {
   id: number
   name: number
   email: number
+  phone: number
   organization: number
   invitedBy: number
   isAttended: number
@@ -84,6 +87,7 @@ export type CandidateMinAggregateInputType = {
   id?: true
   name?: true
   email?: true
+  phone?: true
   organization?: true
   invitedBy?: true
   isAttended?: true
@@ -96,6 +100,7 @@ export type CandidateMaxAggregateInputType = {
   id?: true
   name?: true
   email?: true
+  phone?: true
   organization?: true
   invitedBy?: true
   isAttended?: true
@@ -108,6 +113,7 @@ export type CandidateCountAggregateInputType = {
   id?: true
   name?: true
   email?: true
+  phone?: true
   organization?: true
   invitedBy?: true
   isAttended?: true
@@ -207,6 +213,7 @@ export type CandidateGroupByOutputType = {
   id: number
   name: string
   email: string
+  phone: string | null
   organization: string
   invitedBy: string
   isAttended: boolean
@@ -242,6 +249,7 @@ export type CandidateWhereInput = {
   id?: Prisma.IntFilter<"Candidate"> | number
   name?: Prisma.StringFilter<"Candidate"> | string
   email?: Prisma.StringFilter<"Candidate"> | string
+  phone?: Prisma.StringNullableFilter<"Candidate"> | string | null
   organization?: Prisma.StringFilter<"Candidate"> | string
   invitedBy?: Prisma.StringFilter<"Candidate"> | string
   isAttended?: Prisma.BoolFilter<"Candidate"> | boolean
@@ -254,6 +262,7 @@ export type CandidateOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
+  phone?: Prisma.SortOrderInput | Prisma.SortOrder
   organization?: Prisma.SortOrder
   invitedBy?: Prisma.SortOrder
   isAttended?: Prisma.SortOrder
@@ -269,6 +278,7 @@ export type CandidateWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.CandidateWhereInput[]
   NOT?: Prisma.CandidateWhereInput | Prisma.CandidateWhereInput[]
   name?: Prisma.StringFilter<"Candidate"> | string
+  phone?: Prisma.StringNullableFilter<"Candidate"> | string | null
   organization?: Prisma.StringFilter<"Candidate"> | string
   invitedBy?: Prisma.StringFilter<"Candidate"> | string
   isAttended?: Prisma.BoolFilter<"Candidate"> | boolean
@@ -281,6 +291,7 @@ export type CandidateOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
+  phone?: Prisma.SortOrderInput | Prisma.SortOrder
   organization?: Prisma.SortOrder
   invitedBy?: Prisma.SortOrder
   isAttended?: Prisma.SortOrder
@@ -301,6 +312,7 @@ export type CandidateScalarWhereWithAggregatesInput = {
   id?: Prisma.IntWithAggregatesFilter<"Candidate"> | number
   name?: Prisma.StringWithAggregatesFilter<"Candidate"> | string
   email?: Prisma.StringWithAggregatesFilter<"Candidate"> | string
+  phone?: Prisma.StringNullableWithAggregatesFilter<"Candidate"> | string | null
   organization?: Prisma.StringWithAggregatesFilter<"Candidate"> | string
   invitedBy?: Prisma.StringWithAggregatesFilter<"Candidate"> | string
   isAttended?: Prisma.BoolWithAggregatesFilter<"Candidate"> | boolean
@@ -312,6 +324,7 @@ export type CandidateScalarWhereWithAggregatesInput = {
 export type CandidateCreateInput = {
   name: string
   email: string
+  phone?: string | null
   organization: string
   invitedBy: string
   isAttended?: boolean
@@ -324,6 +337,7 @@ export type CandidateUncheckedCreateInput = {
   id?: number
   name: string
   email: string
+  phone?: string | null
   organization: string
   invitedBy: string
   isAttended?: boolean
@@ -335,6 +349,7 @@ export type CandidateUncheckedCreateInput = {
 export type CandidateUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organization?: Prisma.StringFieldUpdateOperationsInput | string
   invitedBy?: Prisma.StringFieldUpdateOperationsInput | string
   isAttended?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -347,6 +362,7 @@ export type CandidateUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organization?: Prisma.StringFieldUpdateOperationsInput | string
   invitedBy?: Prisma.StringFieldUpdateOperationsInput | string
   isAttended?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -359,6 +375,7 @@ export type CandidateCreateManyInput = {
   id?: number
   name: string
   email: string
+  phone?: string | null
   organization: string
   invitedBy: string
   isAttended?: boolean
@@ -370,6 +387,7 @@ export type CandidateCreateManyInput = {
 export type CandidateUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organization?: Prisma.StringFieldUpdateOperationsInput | string
   invitedBy?: Prisma.StringFieldUpdateOperationsInput | string
   isAttended?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -382,6 +400,7 @@ export type CandidateUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organization?: Prisma.StringFieldUpdateOperationsInput | string
   invitedBy?: Prisma.StringFieldUpdateOperationsInput | string
   isAttended?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -394,6 +413,7 @@ export type CandidateCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
   organization?: Prisma.SortOrder
   invitedBy?: Prisma.SortOrder
   isAttended?: Prisma.SortOrder
@@ -410,6 +430,7 @@ export type CandidateMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
   organization?: Prisma.SortOrder
   invitedBy?: Prisma.SortOrder
   isAttended?: Prisma.SortOrder
@@ -422,6 +443,7 @@ export type CandidateMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
   organization?: Prisma.SortOrder
   invitedBy?: Prisma.SortOrder
   isAttended?: Prisma.SortOrder
@@ -432,6 +454,10 @@ export type CandidateMinOrderByAggregateInput = {
 
 export type CandidateSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type BoolFieldUpdateOperationsInput = {
@@ -448,6 +474,7 @@ export type CandidateSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   id?: boolean
   name?: boolean
   email?: boolean
+  phone?: boolean
   organization?: boolean
   invitedBy?: boolean
   isAttended?: boolean
@@ -460,6 +487,7 @@ export type CandidateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   id?: boolean
   name?: boolean
   email?: boolean
+  phone?: boolean
   organization?: boolean
   invitedBy?: boolean
   isAttended?: boolean
@@ -472,6 +500,7 @@ export type CandidateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   id?: boolean
   name?: boolean
   email?: boolean
+  phone?: boolean
   organization?: boolean
   invitedBy?: boolean
   isAttended?: boolean
@@ -484,6 +513,7 @@ export type CandidateSelectScalar = {
   id?: boolean
   name?: boolean
   email?: boolean
+  phone?: boolean
   organization?: boolean
   invitedBy?: boolean
   isAttended?: boolean
@@ -492,7 +522,7 @@ export type CandidateSelectScalar = {
   updatedAt?: boolean
 }
 
-export type CandidateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "organization" | "invitedBy" | "isAttended" | "attendedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["candidate"]>
+export type CandidateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "organization" | "invitedBy" | "isAttended" | "attendedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["candidate"]>
 
 export type $CandidatePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Candidate"
@@ -501,6 +531,7 @@ export type $CandidatePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     id: number
     name: string
     email: string
+    phone: string | null
     organization: string
     invitedBy: string
     isAttended: boolean
@@ -933,6 +964,7 @@ export interface CandidateFieldRefs {
   readonly id: Prisma.FieldRef<"Candidate", 'Int'>
   readonly name: Prisma.FieldRef<"Candidate", 'String'>
   readonly email: Prisma.FieldRef<"Candidate", 'String'>
+  readonly phone: Prisma.FieldRef<"Candidate", 'String'>
   readonly organization: Prisma.FieldRef<"Candidate", 'String'>
   readonly invitedBy: Prisma.FieldRef<"Candidate", 'String'>
   readonly isAttended: Prisma.FieldRef<"Candidate", 'Boolean'>

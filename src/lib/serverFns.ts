@@ -39,6 +39,7 @@ export const importCandidatesServerFn = createServerFn({
     const candidates = jsonData.map((row: any) => ({
       name: String(row.name || row.Name || ''),
       email: String(row.email || row.Email || ''),
+      phone: String(row.phone || row.Phone || ''),
       organization: String(row.organization || row.Organization || ''),
       invitedBy: String(
         row.invited_by || row.invitedBy || row['Invited By'] || '',
@@ -198,7 +199,7 @@ export const createCandidateServerFn = createServerFn({
   method: 'POST',
 }).handler(async (data) => {
   try {
-    const { name, email, organization, invitedBy } = data.data || {}
+    const { name, email, phone, organization, invitedBy } = data.data || {}
 
     if (!name || !email) {
       return { error: 'Name and email are required' }
@@ -208,6 +209,7 @@ export const createCandidateServerFn = createServerFn({
       data: {
         name,
         email,
+        phone: phone || '',
         organization: organization || '',
         invitedBy: invitedBy || '',
       },
@@ -224,7 +226,7 @@ export const updateCandidateServerFn = createServerFn({
   method: 'POST',
 }).handler(async (data) => {
   try {
-    const { id, name, email, organization, invitedBy, isAttended, attendedAt } = data.data || {}
+    const { id, name, email, phone, organization, invitedBy, isAttended, attendedAt } = data.data || {}
 
     if (!id) {
       return { error: 'Candidate ID is required' }
@@ -235,6 +237,7 @@ export const updateCandidateServerFn = createServerFn({
       data: {
         name,
         email,
+        phone,
         organization,
         invitedBy,
         isAttended,

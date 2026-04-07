@@ -43,6 +43,7 @@ interface Candidate {
   id: number
   name: string
   email: string
+  phone: string
   organization: string
   invitedBy: string
   isAttended: boolean

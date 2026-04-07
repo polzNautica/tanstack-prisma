@@ -605,6 +605,7 @@ export const CandidateScalarFieldEnum = {
   id: 'id',
   name: 'name',
   email: 'email',
+  phone: 'phone',
   organization: 'organization',
   invitedBy: 'invitedBy',
   isAttended: 'isAttended',

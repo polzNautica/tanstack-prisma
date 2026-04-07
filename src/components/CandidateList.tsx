@@ -12,6 +12,7 @@ interface Candidate {
   id: number
   name: string
   email: string
+  phone: string
   organization: string
   invitedBy: string
   isAttended: boolean
@@ -246,6 +247,9 @@ export default function CandidateList({
                 Email
               </th>
               <th className="text-left py-3 px-3 md:px-4 font-medium text-xs md:text-sm hidden md:table-cell">
+                Phone
+              </th>
+              <th className="text-left py-3 px-3 md:px-4 font-medium text-xs md:text-sm hidden lg:table-cell">
                 Organization
               </th>
               <th className="text-left py-3 px-3 md:px-4 font-medium text-xs md:text-sm">
@@ -270,7 +274,18 @@ export default function CandidateList({
                   {candidate.email}
                 </td>
                 <td className="py-3 px-3 md:px-4 text-sm hidden md:table-cell">
-                  {candidate.organization}
+                  {candidate.phone ? (
+                    candidate.phone
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="py-3 px-3 md:px-4 text-sm hidden lg:table-cell">
+                  {candidate.organization ? (
+                    candidate.organization
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </td>
                 <td className="py-3 px-3 md:px-4">
                   {candidate.isAttended ? (

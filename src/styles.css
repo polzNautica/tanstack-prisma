@@ -260,7 +260,7 @@ pre code {
 }
 
 .page-wrap {
-  width: min(1080px, calc(100% - 2rem));
+  @apply w-full md:w-[90vw];
   margin-inline: auto;
 }
 
