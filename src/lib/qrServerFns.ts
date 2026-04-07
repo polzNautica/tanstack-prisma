@@ -9,7 +9,7 @@ export const generateQRServerFn = createServerFn({
 }).handler(async (data) => {
   try {
     const { candidateId } = data.data || {}
-    
+
     if (!candidateId) {
       return { error: 'Candidate ID is required' }
     }
@@ -81,13 +81,18 @@ export const scanQRServerFn = createServerFn({
 
     // If not found via email, check if the raw data matches an ID or email directly
     if (!candidate) {
-      // Try to find by ID or email directly (raw QR data)
+      // Try to find by ID (as number) or email directly (raw QR data)
+      const idAsNumber = Number(encryptedData)
+      const whereConditions: any[] = []
+      
+      if (!isNaN(idAsNumber)) {
+        whereConditions.push({ id: idAsNumber })
+      }
+      whereConditions.push({ email: encryptedData })
+      
       candidate = await prisma.candidate.findFirst({
         where: {
-          OR: [
-            { id: encryptedData },
-            { email: encryptedData },
-          ],
+          OR: whereConditions,
         },
       })
     }

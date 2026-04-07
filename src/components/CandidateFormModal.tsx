@@ -10,7 +10,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 
 interface Candidate {
-  id: string
+  id?: number
   name: string
   email: string
   organization: string
@@ -29,7 +29,6 @@ export default function CandidateFormModal({
   onClose,
 }: CandidateFormModalProps) {
   const [formData, setFormData] = useState<Candidate>({
-    id: '',
     name: '',
     email: '',
     organization: '',
@@ -39,10 +38,15 @@ export default function CandidateFormModal({
 
   useEffect(() => {
     if (candidate) {
-      setFormData(candidate)
+      setFormData({
+        id: candidate.id,
+        name: candidate.name,
+        email: candidate.email,
+        organization: candidate.organization,
+        invitedBy: candidate.invitedBy,
+      })
     } else {
       setFormData({
-        id: '',
         name: '',
         email: '',
         organization: '',
@@ -73,7 +77,7 @@ export default function CandidateFormModal({
               <CardDescription className="text-xs md:text-sm mt-1">
                 {candidate
                   ? 'Update candidate information'
-                  : 'Add a new candidate to the system'}
+                  : 'Add a new candidate to the system (ID auto-generated)'}
               </CardDescription>
             </div>
             <Button
@@ -88,27 +92,6 @@ export default function CandidateFormModal({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                ID <span className="text-red-500">*</span>
-              </label>
-              <Input
-                value={formData.id}
-                onChange={(e) =>
-                  setFormData({ ...formData, id: e.target.value })
-                }
-                placeholder="e.g., CAND001"
-                required
-                disabled={!!candidate}
-                className="text-sm"
-              />
-              {candidate && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  ID cannot be changed
-                </p>
-              )}
-            </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">
                 Name <span className="text-red-500">*</span>

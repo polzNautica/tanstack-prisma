@@ -37,7 +37,6 @@ export const importCandidatesServerFn = createServerFn({
     console.log('Parsed rows:', jsonData.length)
 
     const candidates = jsonData.map((row: any) => ({
-      id: String(row.id || row.ID || ''),
       name: String(row.name || row.Name || ''),
       email: String(row.email || row.Email || ''),
       organization: String(row.organization || row.Organization || ''),
@@ -47,7 +46,7 @@ export const importCandidatesServerFn = createServerFn({
     }))
 
     const validCandidates = candidates.filter(
-      (c) => c.id && c.name && c.email,
+      (c) => c.name && c.email,
     )
 
     console.log('Valid candidates:', validCandidates.length)
@@ -114,40 +113,70 @@ export const fetchCandidatesServerFn = createServerFn().handler(
         page = 1,
         limit = 50,
         search = '',
-      } = data.data || {}
+        statusFilter = 'all',
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+      } = data?.data || {}
       
       console.log('=== FETCH CANDIDATES ===')
-      console.log('Full data received:', Object.keys(data))
-      console.log('data.data:', data.data)
-      console.log('Search term:', search)
-      console.log('Page:', page, 'Limit:', limit)
+      console.log('Extracted params:', { search, statusFilter, sortBy, sortOrder, page, limit })
       
       const skip = (page - 1) * limit
 
-      const where = search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' as const } },
-              { email: { contains: search, mode: 'insensitive' as const } },
-              { organization: { contains: search, mode: 'insensitive' as const } },
-              { id: { contains: search, mode: 'insensitive' as const } },
-            ],
-          }
+      // Build where clause
+      const whereClauses: any[] = []
+      
+      // Search filter
+      if (search) {
+        whereClauses.push({
+          OR: [
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { email: { contains: search, mode: 'insensitive' as const } },
+            { organization: { contains: search, mode: 'insensitive' as const } },
+            ...(Number(search) ? [{ id: Number(search) }] : []),
+          ],
+        })
+      }
+
+      // Status filter
+      if (statusFilter === 'attended') {
+        whereClauses.push({ isAttended: true })
+      } else if (statusFilter === 'pending') {
+        whereClauses.push({ isAttended: false })
+      }
+
+      const where = whereClauses.length > 0 
+        ? { AND: whereClauses } 
         : {}
 
-      console.log('Where clause:', JSON.stringify(where, null, 2))
+      // Build order by
+      const orderBy: any = {}
+      if (sortBy === 'name') {
+        orderBy.name = sortOrder
+      } else if (sortBy === 'attendedAt') {
+        // Recently attended = first to last (asc)
+        // Oldest attended = last to first (desc)
+        orderBy.attendedAt = sortOrder === 'asc' ? 'asc' : 'desc'
+      } else {
+        // newest/oldest based on id
+        orderBy.id = sortOrder === 'desc' ? 'desc' : 'asc'
+      }
 
-      const [candidates, total] = await Promise.all([
+      console.log('Where clause:', JSON.stringify(where, null, 2))
+      console.log('Order by:', orderBy)
+
+      const [candidates, total, attendedTotal] = await Promise.all([
         prisma.candidate.findMany({
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy,
         }),
         prisma.candidate.count({ where }),
+        prisma.candidate.count({ where: { isAttended: true } }),
       ])
 
-      console.log('Results:', { candidatesCount: candidates.length, total })
+      console.log('Results:', { candidatesCount: candidates.length, total, attendedTotal })
 
       return {
         candidates,
@@ -156,6 +185,7 @@ export const fetchCandidatesServerFn = createServerFn().handler(
           limit,
           total,
           totalPages: Math.ceil(total / limit),
+          attendedTotal,
         },
       }
     } catch (error) {
@@ -168,15 +198,14 @@ export const createCandidateServerFn = createServerFn({
   method: 'POST',
 }).handler(async (data) => {
   try {
-    const { id, name, email, organization, invitedBy } = data.data || {}
+    const { name, email, organization, invitedBy } = data.data || {}
 
-    if (!id || !name || !email) {
-      return { error: 'ID, name, and email are required' }
+    if (!name || !email) {
+      return { error: 'Name and email are required' }
     }
 
     const candidate = await prisma.candidate.create({
       data: {
-        id,
         name,
         email,
         organization: organization || '',
@@ -231,7 +260,7 @@ export const deleteCandidateServerFn = createServerFn({
     }
 
     await prisma.candidate.delete({
-      where: { id },
+      where: { id: Number(id) },
     })
 
     return { success: true }

@@ -40,7 +40,7 @@ export const Route = createFileRoute('/admin/attendance')({
 })
 
 interface Candidate {
-  id: string
+  id: number
   name: string
   email: string
   organization: string
@@ -59,6 +59,7 @@ function AttendanceDashboard() {
     limit: 50,
     total: 0,
     totalPages: 0,
+    attendedTotal: 0,
   })
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
@@ -73,37 +74,50 @@ function AttendanceDashboard() {
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
   const [scannedData, setScannedData] = useState<string | null>(null)
   const [manualSearch, setManualSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'attended' | 'pending'>('all')
+  const [sortBy, setSortBy] = useState<'name' | 'attendedAt' | 'createdAt'>('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const fetchCandidates = useCallback(async (pageNum = 1, searchTerm = '') => {
-    setLoading(true)
+  // Fetch candidates with current filters
+  const fetchCandidates = useCallback(async (
+    pageNum: number,
+    searchTerm: string,
+    currentStatusFilter: 'all' | 'attended' | 'pending',
+    currentSortBy: 'name' | 'attendedAt' | 'createdAt',
+    currentSortOrder: 'asc' | 'desc',
+    showLoading = true
+  ) => {
+    if (showLoading) {
+      setLoading(true)
+    }
     try {
       const data = await fetchCandidatesServerFn({
         data: {
           page: pageNum,
           limit: 50,
           search: searchTerm,
+          statusFilter: currentStatusFilter,
+          sortBy: currentSortBy,
+          sortOrder: currentSortOrder,
         },
       })
 
       if ('error' in data) {
         console.error('Failed to fetch candidates:', data.error)
       } else {
-        console.log('Search results:', {
-          searchTerm: searchTerm,
-          count: data.candidates.length,
-          total: data.pagination.total,
-        })
         setCandidates(data.candidates)
         setPagination(data.pagination)
       }
     } catch (error) {
       console.error('Failed to fetch candidates:', error)
     } finally {
-      setLoading(false)
+      if (showLoading) {
+        setLoading(false)
+      }
     }
-  }, [])
+  }, [statusFilter, sortBy, sortOrder])
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -126,7 +140,7 @@ function AttendanceDashboard() {
 
       if ('success' in result) {
         alert(`Successfully imported ${result.imported} candidates!`)
-        fetchCandidates(pagination.page, search)
+        fetchCandidates(1, search, statusFilter, sortBy, sortOrder, false)
       } else {
         alert(`Import failed: ${result.error}`)
       }
@@ -180,7 +194,7 @@ function AttendanceDashboard() {
           )
         } else {
           alert(`✅ ${data.candidate.name} has been marked as attended!`)
-          fetchCandidates(pagination.page, search)
+          fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
         }
       } else if (data.notFound) {
         setScannedData(data.scannedData)
@@ -211,7 +225,7 @@ function AttendanceDashboard() {
     }
   }
 
-  const handleManualAttendance = async (candidateId: string) => {
+  const handleManualAttendance = async (candidateId: number) => {
     try {
       const data = await manualAttendanceServerFn({
         data: { candidateId },
@@ -222,7 +236,7 @@ function AttendanceDashboard() {
           alert(`${data.candidate.name} has already checked in!`)
         } else {
           alert(`✅ ${data.candidate.name} marked as attended!`)
-          fetchCandidates(pagination.page, search)
+          fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
           setManualModalOpen(false)
         }
       } else {
@@ -252,89 +266,109 @@ function AttendanceDashboard() {
   const handleSaveCandidate = async (candidate: Candidate) => {
     try {
       if (editingCandidate) {
+        // Update existing - optimistic update
+        setCandidates(prev =>
+          prev.map(c =>
+            c.id === candidate.id ? { ...c, ...candidate } : c,
+          ),
+        )
+
         const result = await updateCandidateServerFn({
           data: candidate,
         })
         if ('success' in result) {
-          alert('✅ Candidate updated successfully!')
+          // Sync with server data
+          fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
         } else {
           alert(`Failed: ${result.error}`)
-          return
+          fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
         }
       } else {
+        // Create new - add to list optimistically
         const result = await createCandidateServerFn({
           data: candidate,
         })
         if ('success' in result) {
-          alert('✅ Candidate created successfully!')
+          // Add to beginning of list
+          setCandidates(prev => [result.candidate, ...prev])
         } else {
           alert(`Failed: ${result.error}`)
-          return
         }
       }
       setFormModalOpen(false)
       setEditingCandidate(null)
-      fetchCandidates(pagination.page, search)
     } catch (error) {
       console.error('Save candidate error:', error)
       alert('Failed to save candidate')
+      fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
     }
   }
 
-  const handleDeleteCandidate = async (id: string) => {
+  const handleDeleteCandidate = async (id: number) => {
     if (!confirm('Are you sure you want to delete this candidate? This cannot be undone.')) {
       return
     }
 
+    // Optimistic update - remove from UI immediately
+    const deletedCandidate = candidates.find(c => c.id === id)
+    setCandidates(prev => prev.filter(c => c.id !== id))
+
+    // Sync with server in background
     try {
       const result = await deleteCandidateServerFn({
         data: { id },
       })
-      if ('success' in result) {
-        alert('✅ Candidate deleted successfully!')
-        fetchCandidates(pagination.page, search)
-      } else {
+      if (!('success' in result)) {
         alert(`Failed: ${result.error}`)
+        // Revert on error
+        fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
       }
     } catch (error) {
       console.error('Delete candidate error:', error)
       alert('Failed to delete candidate')
+      // Revert on error
+      fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
     }
   }
 
-  const handleToggleAttendance = async (id: string, isAttended: boolean) => {
+  const handleToggleAttendance = async (id: number, isAttended: boolean) => {
+    // Optimistic update - update UI immediately
+    setCandidates(prev =>
+      prev.map(c =>
+        c.id === id
+          ? {
+              ...c,
+              isAttended,
+              attendedAt: isAttended ? new Date() : null,
+            }
+          : c,
+      ),
+    )
+
+    // Sync with server in background
     try {
-      // Find the candidate in the current list
       const candidate = candidates.find(c => c.id === id)
-      if (!candidate) {
-        alert('Candidate not found')
-        return
-      }
-
-      // Update the candidate
-      const result = await updateCandidateServerFn({
-        data: {
-          ...candidate,
-          isAttended,
-          attendedAt: isAttended ? new Date() : null,
-        },
-      })
-
-      if ('success' in result) {
-        // Refresh the list
-        fetchCandidates(pagination.page, search)
-      } else {
-        alert(`Failed: ${result.error}`)
+      if (candidate) {
+        await updateCandidateServerFn({
+          data: {
+            ...candidate,
+            isAttended,
+            attendedAt: isAttended ? new Date() : null,
+          },
+        })
+        // Refresh with current filters
+        fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
       }
     } catch (error) {
       console.error('Toggle attendance error:', error)
-      alert('Failed to update attendance status')
+      // Revert on error
+      fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
     }
   }
 
   useEffect(() => {
-    fetchCandidates()
-  }, [fetchCandidates])
+    fetchCandidates(1, search, statusFilter, sortBy, sortOrder, true)
+  }, [fetchCandidates, search, statusFilter, sortBy, sortOrder])
 
   const { data: session } = authClient.useSession()
 
@@ -409,11 +443,11 @@ function AttendanceDashboard() {
                   Attended
                 </p>
                 <p className="text-4xl font-bold text-[var(--sea-ink)] mb-1">
-                  {candidates.filter((c) => c.isAttended).length}
+                  {pagination.attendedTotal}
                 </p>
                 <p className="text-sm text-[var(--sea-ink-soft)]">
-                  {pagination.total > 0 
-                    ? `${Math.round((candidates.filter(c => c.isAttended).length / pagination.total) * 100)}% attendance rate`
+                  {pagination.total > 0
+                    ? `${Math.round((pagination.attendedTotal / pagination.total) * 100)}% attendance rate`
                     : 'No candidates yet'}
                 </p>
               </div>
@@ -470,7 +504,7 @@ function AttendanceDashboard() {
                           clearTimeout(searchTimeoutRef.current)
                         }
                         searchTimeoutRef.current = setTimeout(() => {
-                          fetchCandidates(1, value)
+                          fetchCandidates(1, value, statusFilter, sortBy, sortOrder, true)
                         }, 500)
                       }}
                       onKeyDown={(e) => {
@@ -478,7 +512,7 @@ function AttendanceDashboard() {
                           if (searchTimeoutRef.current) {
                             clearTimeout(searchTimeoutRef.current)
                           }
-                          fetchCandidates(1, search)
+                          fetchCandidates(1, search, statusFilter, sortBy, sortOrder, true)
                         }
                       }}
                       className="pl-9"
@@ -489,7 +523,7 @@ function AttendanceDashboard() {
                       if (searchTimeoutRef.current) {
                         clearTimeout(searchTimeoutRef.current)
                       }
-                      fetchCandidates(1, search)
+                      fetchCandidates(1, search, statusFilter, sortBy, sortOrder, true)
                     }}
                     variant="default"
                   >
@@ -499,7 +533,7 @@ function AttendanceDashboard() {
                     <Button
                       onClick={() => {
                         setSearch('')
-                        fetchCandidates(1, '')
+                        fetchCandidates(1, '', statusFilter, sortBy, sortOrder, true)
                       }}
                       variant="outline"
                     >
@@ -523,6 +557,18 @@ function AttendanceDashboard() {
                 onEdit={handleEditCandidate}
                 onDelete={handleDeleteCandidate}
                 onToggleAttendance={handleToggleAttendance}
+                onFilterChange={(filters) => {
+                  setStatusFilter(filters.statusFilter)
+                  setSortBy(filters.sortBy)
+                  setSortOrder(filters.sortOrder)
+                  fetchCandidates(1, search, filters.statusFilter, filters.sortBy, filters.sortOrder, true)
+                }}
+                currentFilters={{
+                  statusFilter,
+                  sortBy,
+                  sortOrder,
+                }}
+                total={pagination.total}
               />
 
               {/* Search Results Indicator */}
@@ -541,7 +587,7 @@ function AttendanceDashboard() {
                     size="sm"
                     onClick={() => {
                       setSearch('')
-                      fetchCandidates(1, '')
+                      fetchCandidates(1, '', statusFilter, sortBy, sortOrder, true)
                     }}
                     className="text-xs"
                   >

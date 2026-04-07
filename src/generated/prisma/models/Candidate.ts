@@ -20,12 +20,22 @@ export type CandidateModel = runtime.Types.Result.DefaultSelection<Prisma.$Candi
 
 export type AggregateCandidate = {
   _count: CandidateCountAggregateOutputType | null
+  _avg: CandidateAvgAggregateOutputType | null
+  _sum: CandidateSumAggregateOutputType | null
   _min: CandidateMinAggregateOutputType | null
   _max: CandidateMaxAggregateOutputType | null
 }
 
+export type CandidateAvgAggregateOutputType = {
+  id: number | null
+}
+
+export type CandidateSumAggregateOutputType = {
+  id: number | null
+}
+
 export type CandidateMinAggregateOutputType = {
-  id: string | null
+  id: number | null
   name: string | null
   email: string | null
   organization: string | null
@@ -37,7 +47,7 @@ export type CandidateMinAggregateOutputType = {
 }
 
 export type CandidateMaxAggregateOutputType = {
-  id: string | null
+  id: number | null
   name: string | null
   email: string | null
   organization: string | null
@@ -61,6 +71,14 @@ export type CandidateCountAggregateOutputType = {
   _all: number
 }
 
+
+export type CandidateAvgAggregateInputType = {
+  id?: true
+}
+
+export type CandidateSumAggregateInputType = {
+  id?: true
+}
 
 export type CandidateMinAggregateInputType = {
   id?: true
@@ -137,6 +155,18 @@ export type CandidateAggregateArgs<ExtArgs extends runtime.Types.Extensions.Inte
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: CandidateAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: CandidateSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: CandidateMinAggregateInputType
@@ -167,12 +197,14 @@ export type CandidateGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   _count?: CandidateCountAggregateInputType | true
+  _avg?: CandidateAvgAggregateInputType
+  _sum?: CandidateSumAggregateInputType
   _min?: CandidateMinAggregateInputType
   _max?: CandidateMaxAggregateInputType
 }
 
 export type CandidateGroupByOutputType = {
-  id: string
+  id: number
   name: string
   email: string
   organization: string
@@ -182,6 +214,8 @@ export type CandidateGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   _count: CandidateCountAggregateOutputType | null
+  _avg: CandidateAvgAggregateOutputType | null
+  _sum: CandidateSumAggregateOutputType | null
   _min: CandidateMinAggregateOutputType | null
   _max: CandidateMaxAggregateOutputType | null
 }
@@ -205,7 +239,7 @@ export type CandidateWhereInput = {
   AND?: Prisma.CandidateWhereInput | Prisma.CandidateWhereInput[]
   OR?: Prisma.CandidateWhereInput[]
   NOT?: Prisma.CandidateWhereInput | Prisma.CandidateWhereInput[]
-  id?: Prisma.StringFilter<"Candidate"> | string
+  id?: Prisma.IntFilter<"Candidate"> | number
   name?: Prisma.StringFilter<"Candidate"> | string
   email?: Prisma.StringFilter<"Candidate"> | string
   organization?: Prisma.StringFilter<"Candidate"> | string
@@ -229,7 +263,7 @@ export type CandidateOrderByWithRelationInput = {
 }
 
 export type CandidateWhereUniqueInput = Prisma.AtLeast<{
-  id?: string
+  id?: number
   email?: string
   AND?: Prisma.CandidateWhereInput | Prisma.CandidateWhereInput[]
   OR?: Prisma.CandidateWhereInput[]
@@ -254,15 +288,17 @@ export type CandidateOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.CandidateCountOrderByAggregateInput
+  _avg?: Prisma.CandidateAvgOrderByAggregateInput
   _max?: Prisma.CandidateMaxOrderByAggregateInput
   _min?: Prisma.CandidateMinOrderByAggregateInput
+  _sum?: Prisma.CandidateSumOrderByAggregateInput
 }
 
 export type CandidateScalarWhereWithAggregatesInput = {
   AND?: Prisma.CandidateScalarWhereWithAggregatesInput | Prisma.CandidateScalarWhereWithAggregatesInput[]
   OR?: Prisma.CandidateScalarWhereWithAggregatesInput[]
   NOT?: Prisma.CandidateScalarWhereWithAggregatesInput | Prisma.CandidateScalarWhereWithAggregatesInput[]
-  id?: Prisma.StringWithAggregatesFilter<"Candidate"> | string
+  id?: Prisma.IntWithAggregatesFilter<"Candidate"> | number
   name?: Prisma.StringWithAggregatesFilter<"Candidate"> | string
   email?: Prisma.StringWithAggregatesFilter<"Candidate"> | string
   organization?: Prisma.StringWithAggregatesFilter<"Candidate"> | string
@@ -274,7 +310,6 @@ export type CandidateScalarWhereWithAggregatesInput = {
 }
 
 export type CandidateCreateInput = {
-  id: string
   name: string
   email: string
   organization: string
@@ -286,7 +321,7 @@ export type CandidateCreateInput = {
 }
 
 export type CandidateUncheckedCreateInput = {
-  id: string
+  id?: number
   name: string
   email: string
   organization: string
@@ -298,7 +333,6 @@ export type CandidateUncheckedCreateInput = {
 }
 
 export type CandidateUpdateInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   organization?: Prisma.StringFieldUpdateOperationsInput | string
@@ -310,7 +344,7 @@ export type CandidateUpdateInput = {
 }
 
 export type CandidateUncheckedUpdateInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
+  id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   organization?: Prisma.StringFieldUpdateOperationsInput | string
@@ -322,7 +356,7 @@ export type CandidateUncheckedUpdateInput = {
 }
 
 export type CandidateCreateManyInput = {
-  id: string
+  id?: number
   name: string
   email: string
   organization: string
@@ -334,7 +368,6 @@ export type CandidateCreateManyInput = {
 }
 
 export type CandidateUpdateManyMutationInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   organization?: Prisma.StringFieldUpdateOperationsInput | string
@@ -346,7 +379,7 @@ export type CandidateUpdateManyMutationInput = {
 }
 
 export type CandidateUncheckedUpdateManyInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
+  id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   organization?: Prisma.StringFieldUpdateOperationsInput | string
@@ -367,6 +400,10 @@ export type CandidateCountOrderByAggregateInput = {
   attendedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type CandidateAvgOrderByAggregateInput = {
+  id?: Prisma.SortOrder
 }
 
 export type CandidateMaxOrderByAggregateInput = {
@@ -391,6 +428,10 @@ export type CandidateMinOrderByAggregateInput = {
   attendedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type CandidateSumOrderByAggregateInput = {
+  id?: Prisma.SortOrder
 }
 
 export type BoolFieldUpdateOperationsInput = {
@@ -457,7 +498,7 @@ export type $CandidatePayload<ExtArgs extends runtime.Types.Extensions.InternalA
   name: "Candidate"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
-    id: string
+    id: number
     name: string
     email: string
     organization: string
@@ -889,7 +930,7 @@ export interface Prisma__CandidateClient<T, Null = never, ExtArgs extends runtim
  * Fields of the Candidate model
  */
 export interface CandidateFieldRefs {
-  readonly id: Prisma.FieldRef<"Candidate", 'String'>
+  readonly id: Prisma.FieldRef<"Candidate", 'Int'>
   readonly name: Prisma.FieldRef<"Candidate", 'String'>
   readonly email: Prisma.FieldRef<"Candidate", 'String'>
   readonly organization: Prisma.FieldRef<"Candidate", 'String'>
