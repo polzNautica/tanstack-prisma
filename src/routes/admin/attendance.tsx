@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState, useCallback, useRef } from 'react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   Card,
   CardContent,
@@ -13,15 +13,27 @@ import { Badge } from '#/components/ui/badge'
 import CandidateList from '#/components/CandidateList'
 import QRScanner from '#/components/QRScanner'
 import QRCodeModal from '#/components/QRCodeModal'
+import CandidateFormModal from '#/components/CandidateFormModal'
 import {
   importCandidatesServerFn,
   exportCandidatesServerFn,
   fetchCandidatesServerFn,
+  createCandidateServerFn,
+  updateCandidateServerFn,
+  deleteCandidateServerFn,
 } from '#/lib/serverFns'
 import {
   generateQRServerFn,
   scanQRServerFn,
+  manualAttendanceServerFn,
 } from '#/lib/qrServerFns'
+import {
+  SignedIn,
+  SignedOut,
+  RedirectToSignIn,
+} from '@neondatabase/neon-js/auth/react'
+import { authClient } from '#/auth'
+import { ArrowLeft, Upload, Download, QrCode, Search } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/attendance')({
   component: AttendanceDashboard,
@@ -41,6 +53,7 @@ interface Candidate {
 
 function AttendanceDashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [manualCandidates, setManualCandidates] = useState<Candidate[]>([])
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 50,
@@ -52,23 +65,36 @@ function AttendanceDashboard() {
   const [importing, setImporting] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [manualModalOpen, setManualModalOpen] = useState(false)
+  const [formModalOpen, setFormModalOpen] = useState(false)
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
     null,
   )
+  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
+  const [scannedData, setScannedData] = useState<string | null>(null)
+  const [manualSearch, setManualSearch] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchCandidates = useCallback(async (pageNum = 1, searchTerm = '') => {
     setLoading(true)
     try {
       const data = await fetchCandidatesServerFn({
-        page: pageNum,
-        limit: 50,
-        search: searchTerm,
+        data: {
+          page: pageNum,
+          limit: 50,
+          search: searchTerm,
+        },
       })
 
       if ('error' in data) {
         console.error('Failed to fetch candidates:', data.error)
       } else {
+        console.log('Search results:', {
+          searchTerm: searchTerm,
+          count: data.candidates.length,
+          total: data.pagination.total,
+        })
         setCandidates(data.candidates)
         setPagination(data.pagination)
       }
@@ -86,12 +112,9 @@ function AttendanceDashboard() {
     setImporting(true)
 
     try {
-      // Read file as array buffer and convert to base64 string
       const arrayBuffer = await file.arrayBuffer()
       const bytes = new Uint8Array(arrayBuffer)
       const base64String = btoa(String.fromCharCode(...bytes))
-
-      console.log('File info:', { fileName: file.name, fileType: file.type, fileSize: file.size, base64Length: base64String.length })
 
       const result = await importCandidatesServerFn({
         data: {
@@ -159,6 +182,10 @@ function AttendanceDashboard() {
           alert(`✅ ${data.candidate.name} has been marked as attended!`)
           fetchCandidates(pagination.page, search)
         }
+      } else if (data.notFound) {
+        setScannedData(data.scannedData)
+        setManualSearch('')
+        setManualModalOpen(true)
       } else {
         alert(`Scan failed: ${data.error}`)
       }
@@ -168,160 +195,540 @@ function AttendanceDashboard() {
     }
   }
 
+  const handleManualSearch = async () => {
+    if (!manualSearch.trim()) return
+    
+    const searchResults = await fetchCandidatesServerFn({
+      data: {
+        page: 1,
+        limit: 50,
+        search: manualSearch,
+      },
+    })
+    
+    if ('candidates' in searchResults) {
+      setManualCandidates(searchResults.candidates)
+    }
+  }
+
+  const handleManualAttendance = async (candidateId: string) => {
+    try {
+      const data = await manualAttendanceServerFn({
+        data: { candidateId },
+      })
+
+      if ('success' in data) {
+        if (data.alreadyAttended) {
+          alert(`${data.candidate.name} has already checked in!`)
+        } else {
+          alert(`✅ ${data.candidate.name} marked as attended!`)
+          fetchCandidates(pagination.page, search)
+          setManualModalOpen(false)
+        }
+      } else {
+        alert(`Failed: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Manual attendance error:', error)
+      alert('Failed to mark attendance')
+    }
+  }
+
   const handleShowQR = (candidate: Candidate) => {
     setSelectedCandidate(candidate)
     setQrModalOpen(true)
   }
 
-  useState(() => {
+  const handleAddCandidate = () => {
+    setEditingCandidate(null)
+    setFormModalOpen(true)
+  }
+
+  const handleEditCandidate = (candidate: Candidate) => {
+    setEditingCandidate(candidate)
+    setFormModalOpen(true)
+  }
+
+  const handleSaveCandidate = async (candidate: Candidate) => {
+    try {
+      if (editingCandidate) {
+        const result = await updateCandidateServerFn({
+          data: candidate,
+        })
+        if ('success' in result) {
+          alert('✅ Candidate updated successfully!')
+        } else {
+          alert(`Failed: ${result.error}`)
+          return
+        }
+      } else {
+        const result = await createCandidateServerFn({
+          data: candidate,
+        })
+        if ('success' in result) {
+          alert('✅ Candidate created successfully!')
+        } else {
+          alert(`Failed: ${result.error}`)
+          return
+        }
+      }
+      setFormModalOpen(false)
+      setEditingCandidate(null)
+      fetchCandidates(pagination.page, search)
+    } catch (error) {
+      console.error('Save candidate error:', error)
+      alert('Failed to save candidate')
+    }
+  }
+
+  const handleDeleteCandidate = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this candidate? This cannot be undone.')) {
+      return
+    }
+
+    try {
+      const result = await deleteCandidateServerFn({
+        data: { id },
+      })
+      if ('success' in result) {
+        alert('✅ Candidate deleted successfully!')
+        fetchCandidates(pagination.page, search)
+      } else {
+        alert(`Failed: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Delete candidate error:', error)
+      alert('Failed to delete candidate')
+    }
+  }
+
+  const handleToggleAttendance = async (id: string, isAttended: boolean) => {
+    try {
+      // Find the candidate in the current list
+      const candidate = candidates.find(c => c.id === id)
+      if (!candidate) {
+        alert('Candidate not found')
+        return
+      }
+
+      // Update the candidate
+      const result = await updateCandidateServerFn({
+        data: {
+          ...candidate,
+          isAttended,
+          attendedAt: isAttended ? new Date() : null,
+        },
+      })
+
+      if ('success' in result) {
+        // Refresh the list
+        fetchCandidates(pagination.page, search)
+      } else {
+        alert(`Failed: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Toggle attendance error:', error)
+      alert('Failed to update attendance status')
+    }
+  }
+
+  useEffect(() => {
     fetchCandidates()
-  })
+  }, [fetchCandidates])
+
+  const { data: session } = authClient.useSession()
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Attendance Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage candidate imports, exports, and track attendance
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={handleExport} className="flex-1 sm:flex-none">
-            Export
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            className="flex-1 sm:flex-none"
-          >
-            {importing ? 'Importing...' : 'Import Excel'}
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            onChange={handleImport}
-            className="hidden"
-          />
-        </div>
-      </div>
+    <>
+      <SignedIn>
+        {session?.user.role === 'admin' && (
+          <main className="page-wrap px-4 pb-8 pt-14">
+            {/* Hero Section with Gradient Background */}
+            <section className="island-shell rise-in relative overflow-hidden rounded-md px-6 py-10 sm:px-10 sm:py-14 mb-8">
+              <div className="pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(79,184,178,0.32),transparent_66%)]" />
+              <div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(47,106,74,0.18),transparent_66%)]" />
+              
+              <p className="island-kicker mb-3 uppercase">
+                ATTENDANCE MANAGEMENT
+              </p>
+              <h1 className="display-title mb-3 max-w-3xl text-4xl leading-[1.02] font-bold tracking-tight text-[var(--sea-ink)] sm:text-6xl">
+                Track Attendance
+              </h1>
+              <p className="m-0 max-w-3xl text-base leading-8 text-[var(--sea-ink-soft)]">
+                Manage candidate imports, exports, and track attendance in real-time
+              </p>
+              
+              <div className="flex flex-wrap gap-3 mt-6">
+                <Button
+                  onClick={handleExport}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export Excel
+                </Button>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importing}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  {importing ? 'Importing...' : 'Import Excel'}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </div>
+            </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Quick Stats</CardTitle>
-            <CardDescription>Overview of attendance data</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                <p className="text-xs text-blue-600 dark:text-blue-400">
+            {/* Stats Cards Grid */}
+            <section className="grid gap-4 sm:grid-cols-2 mb-8">
+              {/* Total Candidates Card */}
+              <div className="island-shell rise-in relative overflow-hidden rounded-2xl p-6">
+                <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[radial-gradient(circle,rgba(79,184,178,0.15),transparent_66%)]" />
+                <p className="island-kicker mb-2 uppercase text-xs">
                   Total Candidates
                 </p>
-                <p className="text-2xl md:text-3xl font-bold text-blue-700 dark:text-blue-300">
+                <p className="text-4xl font-bold text-[var(--sea-ink)] mb-1">
                   {pagination.total}
                 </p>
+                <p className="text-sm text-[var(--sea-ink-soft)]">
+                  Registered in system
+                </p>
               </div>
-              <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg">
-                <p className="text-xs text-green-600 dark:text-green-400">
+
+              {/* Attended Card */}
+              <div className="island-shell rise-in relative overflow-hidden rounded-2xl p-6">
+                <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[radial-gradient(circle,rgba(47,106,74,0.15),transparent_66%)]" />
+                <p className="island-kicker mb-2 uppercase text-xs">
                   Attended
                 </p>
-                <p className="text-2xl md:text-3xl font-bold text-green-700 dark:text-green-300">
+                <p className="text-4xl font-bold text-[var(--sea-ink)] mb-1">
                   {candidates.filter((c) => c.isAttended).length}
                 </p>
+                <p className="text-sm text-[var(--sea-ink-soft)]">
+                  {pagination.total > 0 
+                    ? `${Math.round((candidates.filter(c => c.isAttended).length / pagination.total) * 100)}% attendance rate`
+                    : 'No candidates yet'}
+                </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </section>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Scan QR Code</CardTitle>
-            <CardDescription>
-              Scan candidate QR codes for attendance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              onClick={() => setScanning(true)}
-              className="w-full"
-              size="lg"
-            >
-              📷 Start Scanning
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+            {/* QR Scanner Section */}
+            <section className="island-shell rise-in rounded-2xl p-6 mb-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                <div>
+                  <p className="island-kicker mb-1 uppercase text-xs">
+                    Quick Check-in
+                  </p>
+                  <h2 className="text-xl font-semibold text-[var(--sea-ink)]">
+                    Scan QR Code
+                  </h2>
+                  <p className="text-sm text-[var(--sea-ink-soft)] mt-1">
+                    Scan candidate QR codes for instant attendance marking
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setScanning(true)}
+                  className="gap-2"
+                  size="lg"
+                >
+                  <QrCode className="h-5 w-5" />
+                  Start Scanning
+                </Button>
+              </div>
+            </section>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Candidates</CardTitle>
-          <CardDescription>Search and manage candidate list</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-col sm:flex-row gap-2">
-            <Input
-              placeholder="Search by name, email, etc..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  fetchCandidates(1, search)
-                }
-              }}
-              className="w-full sm:flex-1"
-            />
-            <Button onClick={() => fetchCandidates(1, search)} className="w-full sm:w-auto">Search</Button>
-          </div>
+            {/* Candidates List Section */}
+            <section className="island-shell rise-in rounded-2xl p-6">
+              <div className="mb-6">
+                <p className="island-kicker mb-1 uppercase text-xs">
+                  Candidate Management
+                </p>
+                <h2 className="text-xl font-semibold text-[var(--sea-ink)] mb-4">
+                  All Candidates
+                </h2>
+                
+                {/* Search Bar */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--sea-ink-soft)]" />
+                    <Input
+                      placeholder="Search by name, email, or organization..."
+                      value={search}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setSearch(value)
+                        
+                        // Auto-search with debounce
+                        if (searchTimeoutRef.current) {
+                          clearTimeout(searchTimeoutRef.current)
+                        }
+                        searchTimeoutRef.current = setTimeout(() => {
+                          fetchCandidates(1, value)
+                        }, 500)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (searchTimeoutRef.current) {
+                            clearTimeout(searchTimeoutRef.current)
+                          }
+                          fetchCandidates(1, search)
+                        }
+                      }}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (searchTimeoutRef.current) {
+                        clearTimeout(searchTimeoutRef.current)
+                      }
+                      fetchCandidates(1, search)
+                    }}
+                    variant="default"
+                  >
+                    Search
+                  </Button>
+                  {search && (
+                    <Button
+                      onClick={() => {
+                        setSearch('')
+                        fetchCandidates(1, '')
+                      }}
+                      variant="outline"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleAddCandidate}
+                    variant="default"
+                    className="gap-2"
+                  >
+                    <span>+</span> Add Candidate
+                  </Button>
+                </div>
+              </div>
 
-          <CandidateList
-            candidates={candidates}
-            loading={loading}
-            onShowQR={handleShowQR}
-          />
+              <CandidateList
+                candidates={candidates}
+                loading={loading}
+                onShowQR={handleShowQR}
+                onEdit={handleEditCandidate}
+                onDelete={handleDeleteCandidate}
+                onToggleAttendance={handleToggleAttendance}
+              />
 
-          {pagination.totalPages > 1 && (
-            <div className="flex justify-between items-center mt-4">
-              <Button
-                variant="outline"
-                onClick={() => fetchCandidates(pagination.page - 1, search)}
-                disabled={pagination.page <= 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {pagination.page} of {pagination.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                onClick={() => fetchCandidates(pagination.page + 1, search)}
-                disabled={pagination.page >= pagination.totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              {/* Search Results Indicator */}
+              {search && (
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                      🔍 Searching: "{search}"
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      Found {pagination.total} result{pagination.total !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearch('')
+                      fetchCandidates(1, '')
+                    }}
+                    className="text-xs"
+                  >
+                    Clear Search
+                  </Button>
+                </div>
+              )}
 
-      {scanning && (
-        <QRScanner
-          onScan={handleScanComplete}
-          onClose={() => setScanning(false)}
-        />
-      )}
+              {/* Pagination */}
+              {pagination.totalPages > 1 && (
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchCandidates(pagination.page - 1, search)}
+                    disabled={pagination.page <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-[var(--sea-ink-soft)]">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchCandidates(pagination.page + 1, search)}
+                    disabled={pagination.page >= pagination.totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </section>
 
-      {qrModalOpen && selectedCandidate && (
-        <QRCodeModal
-          candidate={selectedCandidate}
-          onClose={() => {
-            setQrModalOpen(false)
-            setSelectedCandidate(null)
-          }}
-        />
-      )}
-    </div>
+            {/* Modals */}
+            {scanning && (
+              <QRScanner
+                onScan={handleScanComplete}
+                onClose={() => setScanning(false)}
+              />
+            )}
+
+            {qrModalOpen && selectedCandidate && (
+              <QRCodeModal
+                candidate={selectedCandidate}
+                onClose={() => {
+                  setQrModalOpen(false)
+                  setSelectedCandidate(null)
+                }}
+              />
+            )}
+
+            {formModalOpen && (
+              <CandidateFormModal
+                candidate={editingCandidate}
+                onSave={handleSaveCandidate}
+                onClose={() => {
+                  setFormModalOpen(false)
+                  setEditingCandidate(null)
+                }}
+              />
+            )}
+
+            {manualModalOpen && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="island-shell relative overflow-hidden rounded-2xl w-full max-w-sm md:max-w-lg mx-2 max-h-[90vh] overflow-y-auto">
+                  <div className="pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(79,184,178,0.32),transparent_66%)]" />
+                  
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <p className="island-kicker mb-1 uppercase text-xs">
+                          Manual Check-in
+                        </p>
+                        <h3 className="text-lg font-semibold text-[var(--sea-ink)]">
+                          Manual Attendance
+                        </h3>
+                        <p className="text-xs text-[var(--sea-ink-soft)] mt-1">
+                          QR code not recognized. Search and select candidate:
+                        </p>
+                        {scannedData && (
+                          <p className="text-xs text-muted-foreground mt-2 font-mono break-all">
+                            Scanned: {scannedData}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setManualModalOpen(false)
+                          setManualCandidates([])
+                        }}
+                        className="h-8 w-8 p-0 flex-shrink-0"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Search by name, email, ID..."
+                          value={manualSearch}
+                          onChange={(e) => setManualSearch(e.target.value)}
+                          onKeyDown={(e) =>
+                            e.key === 'Enter' && handleManualSearch()
+                          }
+                          className="flex-1 text-sm"
+                        />
+                        <Button
+                          onClick={handleManualSearch}
+                          size="sm"
+                          className="text-sm"
+                        >
+                          Search
+                        </Button>
+                      </div>
+
+                      <div className="max-h-60 overflow-y-auto space-y-2">
+                        {manualCandidates.length === 0 && manualSearch && (
+                          <p className="text-center text-sm text-[var(--sea-ink-soft)] py-4">
+                            No candidates found
+                          </p>
+                        )}
+                        {manualCandidates.map((candidate) => (
+                          <div
+                            key={candidate.id}
+                            className="p-3 border rounded-lg hover:bg-muted cursor-pointer transition-all hover:border-[var(--teal)]"
+                            onClick={() => handleManualAttendance(candidate.id)}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">
+                                  {candidate.name}
+                                </p>
+                                <p className="text-xs text-[var(--sea-ink-soft)]">
+                                  {candidate.email}
+                                </p>
+                                <p className="text-xs text-[var(--sea-ink-soft)]">
+                                  {candidate.organization}
+                                </p>
+                                <p className="text-xs font-mono mt-1">
+                                  ID: {candidate.id}
+                                </p>
+                              </div>
+                              {candidate.isAttended ? (
+                                <Badge variant="success" className="text-xs">
+                                  Attended
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  Click to Mark
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="text-xs text-center text-[var(--sea-ink-soft)] pt-2">
+                        💡 Search for the candidate and click to mark attendance
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+        )}
+        {session?.user.role !== 'admin' && (
+          <main className="page-wrap px-4 pb-8 pt-14">
+            <section className="island-shell rise-in relative overflow-hidden rounded-md px-6 py-10 sm:px-10 sm:py-14 text-center">
+              <div className="pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(79,184,178,0.32),transparent_66%)]" />
+              <div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(47,106,74,0.18),transparent_66%)]" />
+              <p className="island-kicker mb-3 uppercase">Access Denied</p>
+              <h1 className="display-title mb-3 text-4xl font-bold text-[var(--sea-ink)] sm:text-5xl">
+                Unauthorized Access
+              </h1>
+              <p className="text-[var(--sea-ink-soft)]">
+                You are not authorized to access this page.
+              </p>
+            </section>
+          </main>
+        )}
+      </SignedIn>
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
+    </>
   )
 }

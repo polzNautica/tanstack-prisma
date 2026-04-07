@@ -23,13 +23,20 @@ export default function Header() {
           </Link>
         </h2>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-8">
           <Link
             to="/"
             className="nav-link"
             activeProps={{ className: 'nav-link is-active' }}
           >
             Home
+          </Link>
+          <Link
+            to="/admin/attendance"
+            className="nav-link"
+            activeProps={{ className: 'nav-link is-active' }}
+          >
+            Tracker
           </Link>
           <Link
             to="/about"

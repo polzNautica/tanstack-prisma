@@ -22,9 +22,10 @@ export const generateQRServerFn = createServerFn({
       return { error: 'Candidate not found' }
     }
 
-    const encryptedId = encryptCandidateId(candidateId)
+    // Encrypt email instead of ID
+    const encryptedEmail = encryptCandidateId(candidate.email)
 
-    const qrCodeDataUrl = await QRCode.toDataURL(encryptedId, {
+    const qrCodeDataUrl = await QRCode.toDataURL(encryptedEmail, {
       width: 300,
       margin: 2,
       color: {
@@ -59,13 +60,95 @@ export const scanQRServerFn = createServerFn({
       return { error: 'No QR code data provided' }
     }
 
-    const candidateId = decryptCandidateId(encryptedData)
+    // Try to decrypt (might not be our encrypted QR)
+    let email: string | null = null
+    try {
+      email = decryptCandidateId(encryptedData)
+    } catch (err) {
+      // Decryption failed - it's not our encrypted QR
+      console.log('Not our encrypted format, using raw data')
+      email = null
+    }
 
-    if (!candidateId) {
+    let candidate = null
+
+    // If we successfully decrypted and got an email, try to find candidate
+    if (email && email.includes('@')) {
+      candidate = await prisma.candidate.findUnique({
+        where: { email },
+      })
+    }
+
+    // If not found via email, check if the raw data matches an ID or email directly
+    if (!candidate) {
+      // Try to find by ID or email directly (raw QR data)
+      candidate = await prisma.candidate.findFirst({
+        where: {
+          OR: [
+            { id: encryptedData },
+            { email: encryptedData },
+          ],
+        },
+      })
+    }
+
+    if (!candidate) {
+      // Candidate not found - return the scanned data for manual input
       return {
         success: false,
-        error: 'Invalid or corrupted QR code',
+        notFound: true,
+        scannedData: encryptedData,
+        message: 'No matching candidate found for this QR code',
       }
+    }
+
+    if (candidate.isAttended) {
+      return {
+        success: true,
+        alreadyAttended: true,
+        candidate: {
+          id: candidate.id,
+          name: candidate.name,
+          email: candidate.email,
+          organization: candidate.organization,
+          attendedAt: candidate.attendedAt,
+        },
+      }
+    }
+
+    const updatedCandidate = await prisma.candidate.update({
+      where: { email: candidate.email },
+      data: {
+        isAttended: true,
+        attendedAt: new Date(),
+      },
+    })
+
+    return {
+      success: true,
+      alreadyAttended: false,
+      candidate: {
+        id: updatedCandidate.id,
+        name: updatedCandidate.name,
+        email: updatedCandidate.email,
+        organization: updatedCandidate.organization,
+        attendedAt: updatedCandidate.attendedAt,
+      },
+    }
+  } catch (error) {
+    console.error('QR scan error:', error)
+    return { error: 'Failed to process QR code' }
+  }
+})
+
+export const manualAttendanceServerFn = createServerFn({
+  method: 'POST',
+}).handler(async (data) => {
+  try {
+    const { candidateId } = data.data || {}
+    
+    if (!candidateId) {
+      return { error: 'Candidate ID is required' }
     }
 
     const candidate = await prisma.candidate.findUnique({
@@ -73,10 +156,7 @@ export const scanQRServerFn = createServerFn({
     })
 
     if (!candidate) {
-      return {
-        success: false,
-        error: 'Candidate not found in database',
-      }
+      return { error: 'Candidate not found' }
     }
 
     if (candidate.isAttended) {
@@ -113,7 +193,7 @@ export const scanQRServerFn = createServerFn({
       },
     }
   } catch (error) {
-    console.error('QR scan error:', error)
-    return { error: 'Failed to process QR code' }
+    console.error('Manual attendance error:', error)
+    return { error: 'Failed to mark attendance' }
   }
 })

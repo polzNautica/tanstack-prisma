@@ -108,16 +108,20 @@ export const exportCandidatesServerFn = createServerFn().handler(async () => {
 })
 
 export const fetchCandidatesServerFn = createServerFn().handler(
-  async ({
-    page = 1,
-    limit = 50,
-    search = '',
-  }: {
-    page?: number
-    limit?: number
-    search?: string
-  }) => {
+  async (data) => {
     try {
+      const {
+        page = 1,
+        limit = 50,
+        search = '',
+      } = data.data || {}
+      
+      console.log('=== FETCH CANDIDATES ===')
+      console.log('Full data received:', Object.keys(data))
+      console.log('data.data:', data.data)
+      console.log('Search term:', search)
+      console.log('Page:', page, 'Limit:', limit)
+      
       const skip = (page - 1) * limit
 
       const where = search
@@ -131,6 +135,8 @@ export const fetchCandidatesServerFn = createServerFn().handler(
           }
         : {}
 
+      console.log('Where clause:', JSON.stringify(where, null, 2))
+
       const [candidates, total] = await Promise.all([
         prisma.candidate.findMany({
           where,
@@ -140,6 +146,8 @@ export const fetchCandidatesServerFn = createServerFn().handler(
         }),
         prisma.candidate.count({ where }),
       ])
+
+      console.log('Results:', { candidatesCount: candidates.length, total })
 
       return {
         candidates,
@@ -152,7 +160,83 @@ export const fetchCandidatesServerFn = createServerFn().handler(
       }
     } catch (error) {
       console.error('Fetch candidates error:', error)
-      return { error: 'Failed to fetch candidates' }
+    return { error: 'Failed to fetch candidates' }
+  }
+})
+
+export const createCandidateServerFn = createServerFn({
+  method: 'POST',
+}).handler(async (data) => {
+  try {
+    const { id, name, email, organization, invitedBy } = data.data || {}
+
+    if (!id || !name || !email) {
+      return { error: 'ID, name, and email are required' }
     }
-  },
-)
+
+    const candidate = await prisma.candidate.create({
+      data: {
+        id,
+        name,
+        email,
+        organization: organization || '',
+        invitedBy: invitedBy || '',
+      },
+    })
+
+    return { success: true, candidate }
+  } catch (error) {
+    console.error('Create candidate error:', error)
+    return { error: (error as Error).message || 'Failed to create candidate' }
+  }
+})
+
+export const updateCandidateServerFn = createServerFn({
+  method: 'POST',
+}).handler(async (data) => {
+  try {
+    const { id, name, email, organization, invitedBy, isAttended, attendedAt } = data.data || {}
+
+    if (!id) {
+      return { error: 'Candidate ID is required' }
+    }
+
+    const candidate = await prisma.candidate.update({
+      where: { id },
+      data: {
+        name,
+        email,
+        organization,
+        invitedBy,
+        isAttended,
+        attendedAt,
+      },
+    })
+
+    return { success: true, candidate }
+  } catch (error) {
+    console.error('Update candidate error:', error)
+    return { error: (error as Error).message || 'Failed to update candidate' }
+  }
+})
+
+export const deleteCandidateServerFn = createServerFn({
+  method: 'POST',
+}).handler(async (data) => {
+  try {
+    const { id } = data.data || {}
+
+    if (!id) {
+      return { error: 'Candidate ID is required' }
+    }
+
+    await prisma.candidate.delete({
+      where: { id },
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Delete candidate error:', error)
+    return { error: (error as Error).message || 'Failed to delete candidate' }
+  }
+})

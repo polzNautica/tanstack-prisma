@@ -187,7 +187,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
                 #qr-reader video {
                   max-height: 300px !important;
                   width: 100% !important;
-                  object-fit: contain !important;
+                  object-fit: cover !important;
                 }
                 #qr-reader__scan_region {
                   max-height: 300px !important;

@@ -230,18 +230,18 @@ export type CandidateOrderByWithRelationInput = {
 
 export type CandidateWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  email?: string
   AND?: Prisma.CandidateWhereInput | Prisma.CandidateWhereInput[]
   OR?: Prisma.CandidateWhereInput[]
   NOT?: Prisma.CandidateWhereInput | Prisma.CandidateWhereInput[]
   name?: Prisma.StringFilter<"Candidate"> | string
-  email?: Prisma.StringFilter<"Candidate"> | string
   organization?: Prisma.StringFilter<"Candidate"> | string
   invitedBy?: Prisma.StringFilter<"Candidate"> | string
   isAttended?: Prisma.BoolFilter<"Candidate"> | boolean
   attendedAt?: Prisma.DateTimeNullableFilter<"Candidate"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Candidate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Candidate"> | Date | string
-}, "id">
+}, "id" | "email">
 
 export type CandidateOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
