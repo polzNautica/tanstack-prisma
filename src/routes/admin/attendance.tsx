@@ -40,6 +40,51 @@ export const Route = createFileRoute('/admin/attendance')({
   component: AttendanceDashboard,
 })
 
+const showToast = {
+  default: (message: string, description?: string) => toast(message, { 
+    description, 
+    position: 'top-right', 
+    richColors: true, 
+    closeButton: true, 
+    id: `default-${Date.now()}` 
+  }),
+  success: (message: string, description?: string) => toast.success(message, { 
+    description, 
+    position: 'top-right', 
+    richColors: true, 
+    closeButton: true, 
+    id: `success-${Date.now()}` 
+  }),
+  error: (message: string, description?: string) => toast.error(message, { 
+    description, 
+    position: 'top-right', 
+    richColors: true, 
+    closeButton: true, 
+    id: `error-${Date.now()}` 
+  }),
+  warning: (message: string, description?: string) => toast.warning(message, { 
+    description, 
+    position: 'top-right', 
+    richColors: true, 
+    closeButton: true, 
+    id: `warning-${Date.now()}` 
+  }),
+  info: (message: string, description?: string) => toast.info(message, { 
+    description, 
+    position: 'top-right', 
+    richColors: true, 
+    closeButton: true, 
+    id: `info-${Date.now()}` 
+  }),
+  loading: (message: string, description?: string) => toast.loading(message, { 
+    description, 
+    position: 'top-right', 
+    richColors: true, 
+    closeButton: true, 
+    id: `loading-${Date.now()}` 
+  }),
+}
+
 interface Candidate {
   id: number
   name: string
@@ -141,14 +186,14 @@ function AttendanceDashboard() {
       })
 
       if ('success' in result) {
-        toast.success(`Successfully imported ${result.imported} candidates!`)
+        showToast.success(`Successfully imported ${result.imported} candidates!`)
         fetchCandidates(1, search, statusFilter, sortBy, sortOrder, false)
       } else {
-        alert(`Import failed: ${result.error}`)
+        showToast.error(`Import failed: ${result.error}`)
       }
     } catch (error) {
       console.error('Import error:', error)
-      alert('Failed to import candidates')
+      showToast.error('Failed to import candidates')
     } finally {
       setImporting(false)
       if (fileInputRef.current) {
@@ -175,11 +220,11 @@ function AttendanceDashboard() {
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
       } else {
-        alert(`Export failed: ${result.error}`)
+        showToast.error(`Export failed: ${result.error}`)
       }
     } catch (error) {
       console.error('Export error:', error)
-      alert('Failed to export candidates')
+      showToast.error('Failed to export candidates')
     }
   }
 
@@ -191,11 +236,11 @@ function AttendanceDashboard() {
 
       if ('success' in data) {
         if (data.alreadyAttended) {
-          alert(
+          showToast.info(
             `${data.candidate.name} has already checked in at ${new Date(data.candidate.attendedAt).toLocaleString()}`,
           )
         } else {
-          alert(`✅ ${data.candidate.name} has been marked as attended!`)
+          showToast.success(`${data.candidate.name} marked as attended!`)
           fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
         }
       } else if (data.notFound) {
@@ -203,11 +248,11 @@ function AttendanceDashboard() {
         setManualSearch('')
         setManualModalOpen(true)
       } else {
-        alert(`Scan failed: ${data.error}`)
+        showToast.error(`Scan failed: ${data.error}`)
       }
     } catch (error) {
       console.error('Scan error:', error)
-      alert('Failed to process QR code')
+      showToast.error('Failed to process QR code')
     }
   }
 
@@ -235,18 +280,18 @@ function AttendanceDashboard() {
 
       if ('success' in data) {
         if (data.alreadyAttended) {
-          alert(`${data.candidate.name} has already checked in!`)
+          showToast.warning(`${data.candidate.name} has already checked in!`)
         } else {
-          alert(`✅ ${data.candidate.name} marked as attended!`)
+          showToast.success(`${data.candidate.name} marked as attended!`)
           fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
           setManualModalOpen(false)
         }
       } else {
-        alert(`Failed: ${data.error}`)
+        showToast.error(`Failed: ${data.error}`)
       }
     } catch (error) {
       console.error('Manual attendance error:', error)
-      alert('Failed to mark attendance')
+      showToast.error('Failed to mark attendance')
     }
   }
 
@@ -282,7 +327,7 @@ function AttendanceDashboard() {
           // Sync with server data
           fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
         } else {
-          alert(`Failed: ${result.error}`)
+          showToast.error(`Failed: ${result.error}`)
           fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
         }
       } else {
@@ -294,14 +339,14 @@ function AttendanceDashboard() {
           // Add to beginning of list
           setCandidates(prev => [result.candidate, ...prev])
         } else {
-          alert(`Failed: ${result.error}`)
+          showToast.error(`Failed: ${result.error}`)
         }
       }
       setFormModalOpen(false)
       setEditingCandidate(null)
     } catch (error) {
       console.error('Save candidate error:', error)
-      alert('Failed to save candidate')
+      showToast.error('Failed to save candidate')
       fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
     }
   }
@@ -321,13 +366,13 @@ function AttendanceDashboard() {
         data: { id },
       })
       if (!('success' in result)) {
-        alert(`Failed: ${result.error}`)
+        showToast.error(`Failed: ${result.error}`)
         // Revert on error
         fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
       }
     } catch (error) {
       console.error('Delete candidate error:', error)
-      alert('Failed to delete candidate')
+      showToast.error('Failed to delete candidate')
       // Revert on error
       fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
     }
@@ -358,6 +403,7 @@ function AttendanceDashboard() {
             attendedAt: isAttended ? new Date() : null,
           },
         })
+        {isAttended ? showToast.success(`${candidate.name} marked as attended`) : showToast.info(`${candidate.name} marked as not attended`)}
         // Refresh with current filters
         fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
       }
