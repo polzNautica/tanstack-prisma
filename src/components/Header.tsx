@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import ThemeToggle from './ThemeToggle'
 import {
   SignedIn,
@@ -8,24 +8,7 @@ import {
 import { authClient } from '@/auth'
 
 export default function Header() {
-  const navigate = useNavigate()
-
-  const handleSignOut = async () => {
-    try {
-      await authClient.signOut()
-      // Clear any cached data
-      if ('caches' in window) {
-        const cacheNames = await caches.keys()
-        await Promise.all(cacheNames.map(name => caches.delete(name)))
-      }
-      // Force redirect to home page after sign out
-      window.location.href = '/'
-    } catch (error) {
-      console.error('Sign out error:', error)
-      // Force sign out even if there's an error
-      window.location.href = '/'
-    }
-  }
+  const { data: session } = authClient.useSession()
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
@@ -64,10 +47,7 @@ export default function Header() {
           </Link>
           <ThemeToggle />
           <SignedIn>
-            <UserButton 
-              size="icon" 
-              afterSignOutUrl="/"
-            />
+            <UserButton size="icon" />
           </SignedIn>
           <SignedOut>
             <Link to="/auth/sign-in" className="nav-link">
