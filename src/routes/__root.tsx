@@ -51,7 +51,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         >
           <Header />
           {children}
-            <Toaster position="top-right" richColors closeButton />
+          {/* <React.StrictMode> */}
+            <Toaster richColors position="top-right" closeButton />
+          {/* </React.StrictMode> */}
           {/* Devtools */}
         </NeonAuthUIProvider>
         <Footer />

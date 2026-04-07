@@ -81,7 +81,6 @@ function AttendanceDashboard() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  let toastId = useRef(0)
 
   // Fetch candidates with current filters
   const fetchCandidates = useCallback(async (
@@ -120,7 +119,7 @@ function AttendanceDashboard() {
         setLoading(false)
       }
     }
-  }, [statusFilter, sortBy, sortOrder])
+  }, [])
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -359,7 +358,6 @@ function AttendanceDashboard() {
             attendedAt: isAttended ? new Date() : null,
           },
         })
-        toast.success('Attendance toggled successfully', {id: `toast-${++toastId.current}`})
         // Refresh with current filters
         fetchCandidates(pagination.page, search, statusFilter, sortBy, sortOrder, false)
       }
@@ -372,7 +370,7 @@ function AttendanceDashboard() {
 
   useEffect(() => {
     fetchCandidates(1, search, statusFilter, sortBy, sortOrder, true)
-  }, [fetchCandidates, search, statusFilter, sortBy, sortOrder])
+  }, [search, statusFilter, sortBy, sortOrder])
 
   const { data: session } = authClient.useSession()
 
